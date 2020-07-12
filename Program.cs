@@ -8,17 +8,16 @@ namespace WSyncer
     {
         static public void CopyFile(string srcPath, string dstPath)
         {
-            const int cBufferSize = 4096;
+            const int cTempBufferSize = 1024 * 1024;
 
             FileStream srcStream = File.OpenRead(srcPath);
             FileStream dstStream = File.OpenWrite(dstPath);
 
-            byte[] tempBuffer = new byte[cBufferSize];
-            Console.WriteLine(srcStream.Length);
+            byte[] tempBuffer = new byte[cTempBufferSize];
 
             for (;;)
             {
-                int bytesReadCount = srcStream.Read(tempBuffer, 0, cBufferSize);
+                int bytesReadCount = srcStream.Read(tempBuffer, 0, cTempBufferSize);
                 dstStream.Write(tempBuffer, 0, bytesReadCount);
 
                 if (bytesReadCount == 0)
@@ -101,7 +100,7 @@ namespace WSyncer
 
         static public void ProcessFiles(
             string srcDir, string dstDir, int srcDirLength, int dstDirLength,
-            ref List<string> out_srcFilesOnly, ref List<string> out_dstFilesOnly, ref List<string> out_srcCommonFiles)
+            ref List<string> out_srcFilesOnly, ref List<string> out_dstFilesOnly, ref List<string> out_dstDirsOnly, ref List<string> out_srcCommonFiles)
         {
             string[] srcFiles = Directory.GetFiles(srcDir);
             string[] srcDirs = Directory.GetDirectories(srcDir);
@@ -128,9 +127,6 @@ namespace WSyncer
             for (int i = 0; i < srcDirsOnly.Count; i++)
                 GetFiles(srcDirsOnly[i], srcFilesOnly);
 
-            for (int i = 0; i < dstDirsOnly.Count; i++)
-                GetFiles(dstDirsOnly[i], dstFilesOnly);
-
             //
 
             for (int i = 0; i < srcFilesOnly.Count; i++)
@@ -138,6 +134,9 @@ namespace WSyncer
 
             for (int i = 0; i < dstFilesOnly.Count; i++)
                 out_dstFilesOnly.Add(dstFilesOnly[i]);
+
+            for (int i = 0; i < dstDirsOnly.Count; i++)
+                out_dstDirsOnly.Add(dstDirsOnly[i]);
 
             for (int i = 0; i < srcCommonFiles.Count; i++)
             {
@@ -148,8 +147,10 @@ namespace WSyncer
                     out_srcCommonFiles.Add(srcCommonFiles[i]);
             }
 
+            //
+
             for (int i = 0; i < srcCommonDirs.Count; i++)
-                ProcessFiles(srcCommonDirs[i], dstCommonDirs[i], srcDirLength, dstDirLength, ref out_srcFilesOnly, ref out_dstFilesOnly, ref out_srcCommonFiles);
+                ProcessFiles(srcCommonDirs[i], dstCommonDirs[i], srcDirLength, dstDirLength, ref out_srcFilesOnly, ref out_dstFilesOnly, ref out_dstDirsOnly, ref out_srcCommonFiles);
         }
     }
 
@@ -157,6 +158,8 @@ namespace WSyncer
     {
         static void Main(string[] args)
         {
+            const bool simulateOnly = true;
+
             if (args.Length != 2)
                 return;
 
@@ -170,35 +173,67 @@ namespace WSyncer
 
             List<string> srcFilesOnly = new List<string>();
             List<string> dstFilesOnly = new List<string>();
+            List<string> dstDirsOnly = new List<string>();
             List<string> srcCommonFiles = new List<string>();
 
-            Utils.ProcessFiles(srcDir, dstDir, srcDir.Length, dstDir.Length, ref srcFilesOnly, ref dstFilesOnly, ref srcCommonFiles);
+            Utils.ProcessFiles(srcDir, dstDir, srcDir.Length, dstDir.Length, ref srcFilesOnly, ref dstFilesOnly, ref dstDirsOnly, ref srcCommonFiles);
 
             for (int i = 0; i < srcFilesOnly.Count; i++)
             {
-                string src = srcFilesOnly[i];
-                string dst = dstDir + src.Substring(srcDir.Length);
+                string srcPath = srcFilesOnly[i];
+                string dstPath = dstDir + srcPath.Substring(srcDir.Length);
 
-                Console.WriteLine("C " + src);
+                if (!simulateOnly)
+                {
+                    string dstPathDir = Path.GetDirectoryName(dstPath);
+                    if (!Directory.Exists(dstPathDir))
+                        Directory.CreateDirectory(dstPathDir);
+
+                    Utils.CopyFile(srcPath, dstPath);
+                }
+
+                Console.WriteLine("C " + srcPath);
             }
-
-            Console.WriteLine();
 
             for (int i = 0; i < dstFilesOnly.Count; i++)
             {
+                if (!simulateOnly)
+                    File.Delete(dstFilesOnly[i]);
+
                 Console.WriteLine("D " + dstFilesOnly[i]);
             }
 
-            Console.WriteLine();
+            for (int i = 0; i < dstDirsOnly.Count; i++)
+            {
+                if (!simulateOnly)
+                {
+                    List<string> files = new List<string>();
+                    Utils.GetFiles(dstDirsOnly[i], files);
+
+                    for (int j = 0; j < files.Count; j++)
+                        File.Delete(files[j]);
+
+                    Directory.Delete(dstDirsOnly[i]);
+                }
+
+                Console.WriteLine("D " + dstDirsOnly[i]);
+            }
 
             for (int i = 0; i < srcCommonFiles.Count; i++)
             {
-                string src = srcCommonFiles[i];
-                string dst = dstDir + src.Substring(srcDir.Length);
+                string srcPath = srcCommonFiles[i];
+                string dstPath = dstDir + srcPath.Substring(srcDir.Length);
 
-                Console.WriteLine("R " + src);
+                if (!simulateOnly)
+                {
+                    File.Delete(dstPath);
+                    Utils.CopyFile(srcPath, dstPath);
+                }
+
+                Console.WriteLine("R " + srcPath);
             }
 
+            Console.WriteLine("Finish!");
             Console.ReadLine();
         }
     }
