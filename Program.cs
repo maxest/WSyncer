@@ -18,10 +18,10 @@ namespace WSyncer
             for (;;)
             {
                 int bytesReadCount = srcStream.Read(tempBuffer, 0, cTempBufferSize);
-                dstStream.Write(tempBuffer, 0, bytesReadCount);
-
                 if (bytesReadCount == 0)
                     break;
+
+                dstStream.Write(tempBuffer, 0, bytesReadCount);
             }
 
             srcStream.Close();
@@ -98,7 +98,7 @@ namespace WSyncer
             }
         }
 
-        static public void ProcessFiles(
+        static public void ReconcileFiles(
             string srcDir, string dstDir, int srcDirLength, int dstDirLength,
             ref List<string> out_srcFilesOnly, ref List<string> out_dstFilesOnly, ref List<string> out_dstDirsOnly, ref List<string> out_srcCommonFiles)
         {
@@ -107,6 +107,36 @@ namespace WSyncer
 
             string[] dstFiles = Directory.GetFiles(dstDir);
             string[] dstDirs = Directory.GetDirectories(dstDir);
+
+            // exclude system files from srcFiles
+            {
+                List<string> srcFiles_noSystem = new List<string>();
+
+                for (int i = 0; i < srcFiles.Length; i++)
+                {
+                    FileInfo fileInfo = new FileInfo(srcFiles[i]);
+
+                    if (!fileInfo.Attributes.HasFlag(FileAttributes.System))
+                        srcFiles_noSystem.Add(srcFiles[i]);
+                }
+
+                srcFiles = srcFiles_noSystem.ToArray();
+            }
+
+            // exclude system dirs from srcDirs
+            {
+                List<string> srcDirs_noSystem = new List<string>();
+
+                for (int i = 0; i < srcDirs.Length; i++)
+                {
+                    DirectoryInfo dirInfo = new DirectoryInfo(srcDirs[i]);
+
+                    if (!dirInfo.Attributes.HasFlag(FileAttributes.System))
+                        srcDirs_noSystem.Add(srcDirs[i]);
+                }
+
+                srcDirs = srcDirs_noSystem.ToArray();
+            }
 
             //
 
@@ -150,7 +180,7 @@ namespace WSyncer
             //
 
             for (int i = 0; i < srcCommonDirs.Count; i++)
-                ProcessFiles(srcCommonDirs[i], dstCommonDirs[i], srcDirLength, dstDirLength, ref out_srcFilesOnly, ref out_dstFilesOnly, ref out_dstDirsOnly, ref out_srcCommonFiles);
+                ReconcileFiles(srcCommonDirs[i], dstCommonDirs[i], srcDirLength, dstDirLength, ref out_srcFilesOnly, ref out_dstFilesOnly, ref out_dstDirsOnly, ref out_srcCommonFiles);
         }
     }
 
@@ -158,25 +188,30 @@ namespace WSyncer
     {
         static void Main(string[] args)
         {
-            const bool simulateOnly = true;
-
-            if (args.Length != 2)
+            if (args.Length != 3)
                 return;
 
             string srcDir = args[0];
             string dstDir = args[1];
+            bool simulateOnly = (int.Parse(args[2]) == 0) ? false : true;
 
             if (!Directory.Exists(srcDir))
                 return;
             if (!Directory.Exists(dstDir))
                 return;
 
+            DateTime timeBefore = DateTime.Now;
+
             List<string> srcFilesOnly = new List<string>();
             List<string> dstFilesOnly = new List<string>();
             List<string> dstDirsOnly = new List<string>();
             List<string> srcCommonFiles = new List<string>();
 
-            Utils.ProcessFiles(srcDir, dstDir, srcDir.Length, dstDir.Length, ref srcFilesOnly, ref dstFilesOnly, ref dstDirsOnly, ref srcCommonFiles);
+            Console.WriteLine("Reconcile Files");
+
+            Utils.ReconcileFiles(srcDir, dstDir, srcDir.Length, dstDir.Length, ref srcFilesOnly, ref dstFilesOnly, ref dstDirsOnly, ref srcCommonFiles);
+
+            Console.WriteLine("Copy Files: " + srcFilesOnly.Count);
 
             for (int i = 0; i < srcFilesOnly.Count; i++)
             {
@@ -185,6 +220,7 @@ namespace WSyncer
 
                 if (!simulateOnly)
                 {
+                    // create directory if needed
                     string dstPathDir = Path.GetDirectoryName(dstPath);
                     if (!Directory.Exists(dstPathDir))
                         Directory.CreateDirectory(dstPathDir);
@@ -195,6 +231,8 @@ namespace WSyncer
                 Console.WriteLine("C " + srcPath);
             }
 
+            Console.WriteLine("Delete Files: " + dstFilesOnly.Count);
+
             for (int i = 0; i < dstFilesOnly.Count; i++)
             {
                 if (!simulateOnly)
@@ -203,21 +241,17 @@ namespace WSyncer
                 Console.WriteLine("D " + dstFilesOnly[i]);
             }
 
+            Console.WriteLine("Delete Dirs: " + dstDirsOnly.Count);
+
             for (int i = 0; i < dstDirsOnly.Count; i++)
             {
                 if (!simulateOnly)
-                {
-                    List<string> files = new List<string>();
-                    Utils.GetFiles(dstDirsOnly[i], files);
-
-                    for (int j = 0; j < files.Count; j++)
-                        File.Delete(files[j]);
-
-                    Directory.Delete(dstDirsOnly[i]);
-                }
+                    Directory.Delete(dstDirsOnly[i], true);
 
                 Console.WriteLine("D " + dstDirsOnly[i]);
             }
+
+            Console.WriteLine("Replace Files: " + srcCommonFiles.Count);
 
             for (int i = 0; i < srcCommonFiles.Count; i++)
             {
@@ -233,7 +267,10 @@ namespace WSyncer
                 Console.WriteLine("R " + srcPath);
             }
 
-            Console.WriteLine("Finish!");
+            DateTime timeAfter = DateTime.Now;
+            int timeDiff = (int)timeAfter.Subtract(timeBefore).TotalSeconds;
+
+            Console.WriteLine("Finish! Time: " + timeDiff + " s. Press Enter...");
             Console.ReadLine();
         }
     }
