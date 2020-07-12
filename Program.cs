@@ -66,16 +66,20 @@ namespace WSyncer
 
                 int order = 0;
                 if (list1Counter >= list1.Length)
+                {
                     order = 1;
+                }
                 else if (list2Counter >= list2.Length)
+                {
                     order = -1;
+                }
                 else
                 {
-                    string a = list1[list1Counter];
-                    string b = list2[list2Counter];
-                    a = a.Substring(11);
-                    b = b.Substring(11);
-                    order = string.Compare(a, b);
+                    string element1 = list1[list1Counter];
+                    string element2 = list2[list2Counter];
+                    element1 = element1.Substring(list1_prefixCharsCountToIngore);
+                    element2 = element2.Substring(list2_prefixCharsCountToIngore);
+                    order = string.Compare(element1, element2);
                 }
 
                 if (order == 0)
@@ -154,8 +158,8 @@ namespace WSyncer
             List<string> dstFilesOnly = new List<string>();
             List<string> srcCommonFiles = new List<string>();
 
-            string srcDir = "Y:\\!TEST\\A\\";
-            string dstDir = "Y:\\!TEST\\B\\";
+            string srcDir = "Y:\\!TEST\\AA\\";
+            string dstDir = "Y:\\!TEST\\BB\\";
 
             Utils.ProcessFiles(srcDir, dstDir, srcDir.Length, dstDir.Length, ref srcFilesOnly, ref dstFilesOnly, ref srcCommonFiles);
 
