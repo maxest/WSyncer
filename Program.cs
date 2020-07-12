@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 
 namespace WSyncer
@@ -143,7 +140,13 @@ namespace WSyncer
                 out_dstFilesOnly.Add(dstFilesOnly[i]);
 
             for (int i = 0; i < srcCommonFiles.Count; i++)
-                out_srcCommonFiles.Add(srcCommonFiles[i]);
+            {
+                DateTime srcDateTime = File.GetLastWriteTime(srcCommonFiles[i]);
+                DateTime dstDateTime = File.GetLastWriteTime(dstCommonFiles[i]);
+
+                if (srcDateTime.Ticks > dstDateTime.Ticks)
+                    out_srcCommonFiles.Add(srcCommonFiles[i]);
+            }
 
             for (int i = 0; i < srcCommonDirs.Count; i++)
                 ProcessFiles(srcCommonDirs[i], dstCommonDirs[i], srcDirLength, dstDirLength, ref out_srcFilesOnly, ref out_dstFilesOnly, ref out_srcCommonFiles);
@@ -154,14 +157,47 @@ namespace WSyncer
     {
         static void Main(string[] args)
         {
+            if (args.Length != 2)
+                return;
+
+            string srcDir = args[0];
+            string dstDir = args[1];
+
+            if (!Directory.Exists(srcDir))
+                return;
+            if (!Directory.Exists(dstDir))
+                return;
+
             List<string> srcFilesOnly = new List<string>();
             List<string> dstFilesOnly = new List<string>();
             List<string> srcCommonFiles = new List<string>();
 
-            string srcDir = "Y:\\!TEST\\AA\\";
-            string dstDir = "Y:\\!TEST\\BB\\";
-
             Utils.ProcessFiles(srcDir, dstDir, srcDir.Length, dstDir.Length, ref srcFilesOnly, ref dstFilesOnly, ref srcCommonFiles);
+
+            for (int i = 0; i < srcFilesOnly.Count; i++)
+            {
+                string src = srcFilesOnly[i];
+                string dst = dstDir + src.Substring(srcDir.Length);
+
+                Console.WriteLine("C " + src);
+            }
+
+            Console.WriteLine();
+
+            for (int i = 0; i < dstFilesOnly.Count; i++)
+            {
+                Console.WriteLine("D " + dstFilesOnly[i]);
+            }
+
+            Console.WriteLine();
+
+            for (int i = 0; i < srcCommonFiles.Count; i++)
+            {
+                string src = srcCommonFiles[i];
+                string dst = dstDir + src.Substring(srcDir.Length);
+
+                Console.WriteLine("R " + src);
+            }
 
             Console.ReadLine();
         }
