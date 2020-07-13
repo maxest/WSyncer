@@ -6,21 +6,53 @@ namespace WSyncer
 {
     class Utils
     {
-        static public void GetFiles(string dir, List<string> files)
+        static public string[] GetFiles(string dir)
         {
-            string[] tempFiles = Directory.GetFiles(dir);
-            string[] tempDirs = Directory.GetDirectories(dir);
+            string[] files = Directory.GetFiles(dir);
+            List<string> files_filtered = new List<string>();
 
-            for (int i = 0; i < tempFiles.Length; i++)
-                files.Add(tempFiles[i]);
+            for (int i = 0; i < files.Length; i++)
+            {
+                FileInfo fileInfo = new FileInfo(files[i]);
 
-            for (int i = 0; i < tempDirs.Length; i++)
-                GetFiles(tempDirs[i], files);
+                if (!fileInfo.Attributes.HasFlag(FileAttributes.System))
+                    files_filtered.Add(files[i]);
+            }
+
+            return files_filtered.ToArray();
+        }
+
+        static public string[] GetDirectories(string dir)
+        {
+            string[] dirs = Directory.GetDirectories(dir);
+            List<string> dirs_filtered = new List<string>();
+
+            for (int i = 0; i < dirs.Length; i++)
+            {
+                DirectoryInfo dirInfo = new DirectoryInfo(dirs[i]);
+
+                if (!dirInfo.Attributes.HasFlag(FileAttributes.System))
+                    dirs_filtered.Add(dirs[i]);
+            }
+
+            return dirs_filtered.ToArray();
+        }
+
+        static public void GetFiles_Recursive(string dir, List<string> filesAcc)
+        {
+            string[] files = GetFiles(dir);
+            string[] dirs = GetDirectories(dir);
+
+            for (int i = 0; i < files.Length; i++)
+                filesAcc.Add(files[i]);
+
+            for (int i = 0; i < dirs.Length; i++)
+                GetFiles_Recursive(dirs[i], filesAcc);
         }
 
         // Pass in sorted lists only.
         // Elements in both lists have some differing prefix which should be ignored during compare.
-        // For instance, an elements in list1 could be "C:/Data/file.dat" and in list2 "D:/Data/file.dat".
+        // For instance, an element in list1 could be "C:/Data/file.dat" and in list2 "D:/Data/file.dat".
         // We want to skip at least 1 char during compare in this case.
         static public void SplitLists(string[] list1, string[] list2, int list1_prefixCharsCountToIngore, int list2_prefixCharsCountToIngore, out List<string> list1Only, out List<string> list2Only, out List<string> list1Common, out List<string> list2Common)
         {
@@ -80,41 +112,11 @@ namespace WSyncer
             string srcDir, string dstDir, int srcDirLength, int dstDirLength,
             ref List<string> out_srcFilesOnly, ref List<string> out_dstFilesOnly, ref List<string> out_dstDirsOnly, ref List<string> out_srcCommonFiles)
         {
-            string[] srcFiles = Directory.GetFiles(srcDir);
-            string[] srcDirs = Directory.GetDirectories(srcDir);
+            string[] srcFiles = GetFiles(srcDir);
+            string[] srcDirs = GetDirectories(srcDir);
 
-            string[] dstFiles = Directory.GetFiles(dstDir);
-            string[] dstDirs = Directory.GetDirectories(dstDir);
-
-            // exclude system files from srcFiles
-            {
-                List<string> srcFiles_noSystem = new List<string>();
-
-                for (int i = 0; i < srcFiles.Length; i++)
-                {
-                    FileInfo fileInfo = new FileInfo(srcFiles[i]);
-
-                    if (!fileInfo.Attributes.HasFlag(FileAttributes.System))
-                        srcFiles_noSystem.Add(srcFiles[i]);
-                }
-
-                srcFiles = srcFiles_noSystem.ToArray();
-            }
-
-            // exclude system dirs from srcDirs
-            {
-                List<string> srcDirs_noSystem = new List<string>();
-
-                for (int i = 0; i < srcDirs.Length; i++)
-                {
-                    DirectoryInfo dirInfo = new DirectoryInfo(srcDirs[i]);
-
-                    if (!dirInfo.Attributes.HasFlag(FileAttributes.System))
-                        srcDirs_noSystem.Add(srcDirs[i]);
-                }
-
-                srcDirs = srcDirs_noSystem.ToArray();
-            }
+            string[] dstFiles = GetFiles(dstDir);
+            string[] dstDirs = GetDirectories(dstDir);
 
             //
 
@@ -133,7 +135,7 @@ namespace WSyncer
             SplitLists(srcDirs, dstDirs, srcDirLength, dstDirLength, out srcDirsOnly, out dstDirsOnly, out srcCommonDirs, out dstCommonDirs);
 
             for (int i = 0; i < srcDirsOnly.Count; i++)
-                GetFiles(srcDirsOnly[i], srcFilesOnly);
+                GetFiles_Recursive(srcDirsOnly[i], srcFilesOnly);
 
             //
 
