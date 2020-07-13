@@ -6,28 +6,6 @@ namespace WSyncer
 {
     class Utils
     {
-        static public void CopyFile(string srcPath, string dstPath)
-        {
-            const int cTempBufferSize = 1024 * 1024;
-
-            FileStream srcStream = File.OpenRead(srcPath);
-            FileStream dstStream = File.OpenWrite(dstPath);
-
-            byte[] tempBuffer = new byte[cTempBufferSize];
-
-            for (;;)
-            {
-                int bytesReadCount = srcStream.Read(tempBuffer, 0, cTempBufferSize);
-                if (bytesReadCount == 0)
-                    break;
-
-                dstStream.Write(tempBuffer, 0, bytesReadCount);
-            }
-
-            srcStream.Close();
-            dstStream.Close();
-        }
-
         static public void GetFiles(string dir, List<string> files)
         {
             string[] tempFiles = Directory.GetFiles(dir);
@@ -173,7 +151,7 @@ namespace WSyncer
                 DateTime srcDateTime = File.GetLastWriteTime(srcCommonFiles[i]);
                 DateTime dstDateTime = File.GetLastWriteTime(dstCommonFiles[i]);
 
-                if (srcDateTime.Ticks > dstDateTime.Ticks)
+                if (srcDateTime.Ticks != dstDateTime.Ticks)
                     out_srcCommonFiles.Add(srcCommonFiles[i]);
             }
 
@@ -225,10 +203,11 @@ namespace WSyncer
                     if (!Directory.Exists(dstPathDir))
                         Directory.CreateDirectory(dstPathDir);
 
-                    Utils.CopyFile(srcPath, dstPath);
+                    File.Copy(srcPath, dstPath, true);
                 }
 
-                Console.WriteLine("C " + srcPath);
+                int progress = (int)(100.0f * (i + 1) / srcFilesOnly.Count);
+                Console.WriteLine("C " + srcPath + " (" + progress + "%)");
             }
 
             Console.WriteLine("Delete Files: " + dstFilesOnly.Count);
@@ -238,7 +217,8 @@ namespace WSyncer
                 if (!simulateOnly)
                     File.Delete(dstFilesOnly[i]);
 
-                Console.WriteLine("D " + dstFilesOnly[i]);
+                int progress = (int)(100.0f * (i + 1) / dstFilesOnly.Count);
+                Console.WriteLine("D " + dstFilesOnly[i] + " (" + progress + "%)");
             }
 
             Console.WriteLine("Delete Dirs: " + dstDirsOnly.Count);
@@ -248,7 +228,8 @@ namespace WSyncer
                 if (!simulateOnly)
                     Directory.Delete(dstDirsOnly[i], true);
 
-                Console.WriteLine("D " + dstDirsOnly[i]);
+                int progress = (int)(100.0f * (i + 1) / dstDirsOnly.Count);
+                Console.WriteLine("D " + dstDirsOnly[i] + " (" + progress + "%)");
             }
 
             Console.WriteLine("Replace Files: " + srcCommonFiles.Count);
@@ -259,12 +240,10 @@ namespace WSyncer
                 string dstPath = dstDir + srcPath.Substring(srcDir.Length);
 
                 if (!simulateOnly)
-                {
-                    File.Delete(dstPath);
-                    Utils.CopyFile(srcPath, dstPath);
-                }
+                    File.Copy(srcPath, dstPath, true);
 
-                Console.WriteLine("R " + srcPath);
+                int progress = (int)(100.0f * (i + 1) / srcCommonFiles.Count);
+                Console.WriteLine("R " + srcPath + " (" + progress + "%)");
             }
 
             DateTime timeAfter = DateTime.Now;
