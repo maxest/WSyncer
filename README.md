@@ -6,9 +6,9 @@ If you run it like this:
 
 `WSyncer.exe C:/Source C:/Destination 1`
 
-it will (only) simulate sync process from `Source` folder onto `Destination` folder.
+it will (only) **simulate** sync process from `Source` folder onto `Destination` folder.
 
-It you call:
+If you call:
 
 `WSyncer.exe C:/Source C:/Destination 0`
 
