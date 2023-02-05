@@ -1,6 +1,6 @@
 # WSyncer
 
-A simple command-line program for syncing files between folders.
+A simple command-line program for syncing files between folders. I use it for backing up all my files.
 
 If you run it like this:
 
