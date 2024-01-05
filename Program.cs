@@ -309,11 +309,8 @@ namespace WSyncer
 			List<string> dstDirsOnly = new List<string>();
 			List<string> srcCommonFiles = new List<string>();
 
-			Console.WriteLine("Reconcile Files");
-
+			Console.WriteLine("Reconcile Files...");
 			Utils.ReconcileFiles(srcDir, dstDir, srcDir.Length, dstDir.Length, ref srcFilesOnly, ref dstFilesOnly, ref dstDirsOnly, ref srcCommonFiles);
-
-			Console.WriteLine("Copy Files: " + srcFilesOnly.Count);
 
 			for (int i = 0; i < srcFilesOnly.Count; i++)
 			{
@@ -321,7 +318,7 @@ namespace WSyncer
 				string dstPath = dstDir + srcPath.Substring(srcDir.Length);
 
 				int progress = (int)(100.0f * (i + 1) / srcFilesOnly.Count);
-				Console.WriteLine("C " + srcPath + " (" + progress + "%)");
+				Console.WriteLine("(" + progress + "%) C " + srcPath);
 
 				if (!simulateOnly)
 				{
@@ -334,29 +331,23 @@ namespace WSyncer
 				}
 			}
 
-			Console.WriteLine("Delete Files: " + dstFilesOnly.Count);
-
 			for (int i = 0; i < dstFilesOnly.Count; i++)
 			{
 				int progress = (int)(100.0f * (i + 1) / dstFilesOnly.Count);
-				Console.WriteLine("D " + dstFilesOnly[i] + " (" + progress + "%)");
+				Console.WriteLine("(" + progress + "%) D " + dstFilesOnly[i]);
 
 				if (!simulateOnly)
 					IOWrapper.FileDelete(dstFilesOnly[i]);
 			}
 
-			Console.WriteLine("Delete Dirs: " + dstDirsOnly.Count);
-
 			for (int i = 0; i < dstDirsOnly.Count; i++)
 			{
 				int progress = (int)(100.0f * (i + 1) / dstDirsOnly.Count);
-				Console.WriteLine("D " + dstDirsOnly[i] + " (" + progress + "%)");
+				Console.WriteLine("(" + progress + "%) D " + dstDirsOnly[i]);
 
 				if (!simulateOnly)
 					IOWrapper.DirectoryDelete(dstDirsOnly[i], true);
 			}
-
-			Console.WriteLine("Replace Files: " + srcCommonFiles.Count);
 
 			for (int i = 0; i < srcCommonFiles.Count; i++)
 			{
@@ -364,7 +355,7 @@ namespace WSyncer
 				string dstPath = dstDir + srcPath.Substring(srcDir.Length);
 
 				int progress = (int)(100.0f * (i + 1) / srcCommonFiles.Count);
-				Console.WriteLine("R " + srcPath + " (" + progress + "%)");
+				Console.WriteLine("(" + progress + "%) R " + srcPath);
 
 				if (!simulateOnly)
 					IOWrapper.FileCopy(srcPath, dstPath, true);
@@ -372,6 +363,11 @@ namespace WSyncer
 
 			DateTime timeAfter = DateTime.Now;
 			int timeDiff = (int)timeAfter.Subtract(timeBefore).TotalSeconds;
+
+			Console.WriteLine("Copy Files: " + srcFilesOnly.Count);
+			Console.WriteLine("Delete Files: " + dstFilesOnly.Count);
+			Console.WriteLine("Delete Dirs: " + dstDirsOnly.Count);
+			Console.WriteLine("Replace Files: " + srcCommonFiles.Count);
 
 			Console.WriteLine("Finish! Time: " + timeDiff + " s. Press Enter...");
 			Console.ReadLine();
